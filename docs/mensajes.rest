@@ -1,0 +1,7 @@
+POST http://127.0.0.1:3000/enviar-mensaje
+Content-Type: application/json
+
+{
+    "numero": "59173277937",
+    "mensaje": "Hola desde mi editor de codigo"
+}

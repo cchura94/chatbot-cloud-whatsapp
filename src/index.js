@@ -1,4 +1,5 @@
 const express = require("express");
+require("dotenv").config();
 const axios = require("axios");
 // inicializar express
 const app = express();
@@ -16,7 +17,8 @@ app.get("/saludo", (req, res) => {
 
 app.post("/enviar-mensaje", async (req, res) => {
     try {
-        const { numero, mensaje } = req.query;
+        const { numero, mensaje } = req.body;
+
         if(!numero || !mensaje){
             return res.status(400).json({
                 success: false,
@@ -35,16 +37,17 @@ app.post("/enviar-mensaje", async (req, res) => {
                 "body": mensaje
             }
         }
-
+        
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer <ACCESS_TOKEN>'
+            'Authorization': 'Bearer '+process.env.WHATSAPP_ACCESS_TOKEN
         }
 
-        const respuesta = await axios.post("https://graph.facebook.com/<API_VERSION>/<WHATSAPP_BUSINESS_PHONE_NUMBER_ID>/messages", payload, {headers});
-        return respuesta.data;
+        const respuesta = await axios.post("https://graph.facebook.com/v22.0/"+process.env.WHASTAPP_PHONE_NUMBER_ID+"/messages", payload, {headers});
+        return res.json(respuesta.data);
         
     } catch (error) {
+        console.log(error);
         
     }
 });
