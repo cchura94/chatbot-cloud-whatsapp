@@ -1,7 +1,80 @@
+### texto
 POST http://127.0.0.1:3000/enviar-mensaje
 Content-Type: application/json
 
 {
     "numero": "59173277937",
-    "mensaje": "Hola desde mi editor de codigo"
+    "mensaje": {
+        "type": "text",
+        "body": "Hola desde VSCode"        
+    }
+}
+
+### imagenes
+POST http://127.0.0.1:3000/enviar-mensaje
+Content-Type: application/json
+
+{
+    "numero": "59173277937",
+    "mensaje": {
+        "type": "image",
+        "link": "https://blumbitvirtual.edtics.com/pluginfile.php/5590/course/overviewfiles/chatbot%20%2815%29.png",
+        "caption": "Este es el curso:\n\n*Curso desarrollo Chatbots para whwtasapp* \nsi quieres participar contáctanos"
+    }
+}
+
+### documento
+POST http://127.0.0.1:3000/enviar-mensaje
+Content-Type: application/json
+
+{
+    "numero": "59173277937",
+    "mensaje": {
+        "type": "document",
+        "link": "https://www.gob.mx/cms/uploads/attachment/file/93387/Temarios.pdf",
+        "filename": "Temario curso desarrollo",
+        "caption": "Este es el Temario curso:\n\n*Curso desarrollo Chatbots para whwtasapp* \nsi quieres participar contáctanos"
+    }
+}
+### ubicacion
+
+POST http://127.0.0.1:3000/enviar-mensaje
+Content-Type: application/json
+
+{
+    "numero": "59173277937",
+    "mensaje": {
+        "type": "location",
+        "latitude": "-16.5003",
+        "longitude": "-68.1238",
+        "name": "Centro La Paz Bolivia",
+        "address": "Av 6 de Agosto, Nro 123"
+    }
+}
+
+### buttons
+
+POST http://127.0.0.1:3000/enviar-mensaje
+Content-Type: application/json
+
+{
+    "numero": "59173277937",
+    "mensaje": {
+        "type": "buttons",
+        "body": "Elige una opción",
+        "buttons": [
+            {
+                "type": "reply",
+                "reply": {"id": "op1", "title": "Opción 1"}
+            },
+            {
+                "type": "reply",
+                "reply": {"id": "op2", "title": "Opción 2"}
+            },
+            {
+                "type": "reply",
+                "reply": {"id": "op3", "title": "Opción 3"}
+            }
+        ]
+    }
 }
