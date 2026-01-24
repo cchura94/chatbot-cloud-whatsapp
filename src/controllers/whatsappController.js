@@ -1,5 +1,8 @@
 const axios = require("axios");
 const whatsappService = require("../services/whatsappService")
+const openAIService = require("./../services/openaiService")
+const Contacto = require("./../models/Contacto");
+const Mensaje = require("./../models/Mensaje");
 
 async function enviarMensaje(req, res){
     try {
@@ -22,6 +25,8 @@ async function enviarMensaje(req, res){
 }
  
 const userContext = {};
+let contacto ;
+let sw = true;
 
 async function recibirMensajesWebhook(req, res){
     try {
@@ -39,6 +44,18 @@ async function recibirMensajesWebhook(req, res){
 
         console.log(nombre, numero, ": ", message);
 
+        contacto = await Contacto.findOne({where: {numero: numero}});
+        if(!contacto){
+            contacto = await Contacto.create({
+                numero: numero,
+                nombre: nombre
+            })
+        }
+
+        console.log("CONTACTO_ID: "+contacto.id);
+
+                
+
         if(message.type === "text"){
             mensajeUsuario = message.text.body.trim();
         }
@@ -49,8 +66,39 @@ async function recibirMensajesWebhook(req, res){
             }
         }
 
+        // Guardar Mensaje del Usuario (entrante)
+
+        console.log(contacto.id)
+        await Mensaje.create({
+            ContactoId: contacto.id,
+            mensaje: mensajeUsuario,
+            tipo: message.type,
+            direccion: 'entrante',
+            source: 'user'
+        });
+
+        if(contacto.saldo>0 && sw){
+            sw=false;
+            console.log("SALDO PENDIENTE A PAGAR: ", contacto.saldo);
+            await whatsappService.enviarMensajeWhatsapp(numero, {
+                 "type": "text",
+                 "body": "Recordarle que tiene un saldo pendiente a pagar de: USD "+ contacto.saldo       
+             });
+
+             await Mensaje.create({
+                ContactoId: contacto.id,
+                mensaje: "Recordarle que tiene un saldo pendiente a pagar de: USD "+ contacto.saldo,
+                tipo: 'text',
+                direccion: 'saliente',
+                source: 'bot'
+            });
+    
+             
+        }
+
+
         if(!userContext[numero]){
-            userContext[numero] = {menuActual: "main"};
+            userContext[numero] = {menuActual: "main", lista_mensajes: []};
             await enviarMenuSimple(numero, "main");
             // await enviarMenuConBotones(numero, "main");
 
@@ -62,16 +110,38 @@ async function recibirMensajesWebhook(req, res){
         const opcion = menu.opciones[mensajeUsuario];
 
         if(!opcion){
-            // await whatsappService.enviarMensajeWhatsapp(numero, {
-            //     "type": "text",
-            //     "body": "Opción no válida, intenta nuevamente"       
-            // });
+            // atender con Inteligencia artificial (OpenAI)
+            const {respuestaIA, lista_mensajes} = await openAIService.conectarConOpenAi(mensajeUsuario, userContext[numero].lista_mensajes)
+            userContext[numero].lista_mensajes = lista_mensajes;
+            await whatsappService.enviarMensajeWhatsapp(numero, {
+                "type": "text",
+                "body": respuestaIA       
+            });
+
+            await Mensaje.create({
+                ContactoId: contacto.id,
+                mensaje: respuestaIA,
+                tipo: 'text',
+                direccion: 'saliente',
+                source: 'ia'
+            });
             return res.sendStatus(200);
         }
 
+       
         // respuesta
         if(opcion.respuesta){
             await whatsappService.enviarMensajeWhatsapp(numero, opcion.respuesta);
+
+            await Mensaje.create({
+                ContactoId: contacto.id,
+                mensaje: JSON.stringify(opcion.respuesta),
+                tipo: opcion.respuesta.type,
+                direccion: 'saliente',
+                source: 'bot'
+            });
+
+            return res.sendStatus(200);
         }
 
         // subMenú
@@ -103,6 +173,14 @@ async function enviarMenuSimple(numero, menuKey){
     await whatsappService.enviarMensajeWhatsapp(numero, {
         "type": "text",
         "body": texto    
+    });
+
+    await Mensaje.create({
+        ContactoId: contacto.id,
+        mensaje: texto,
+        tipo: 'text',
+        direccion: 'saliente',
+        source: 'bot'
     });
 }
 
@@ -428,6 +506,14 @@ const menuData = {
                 respuesta: {
                     "type": "text",
                     "body": "Hola desde VSCode"        
+                }
+            },
+            E: {
+                text: "👩‍💼 Consular deuda pendiente",
+                respuesta: {
+                    "type": "image",
+                    "link": "https://libelula.bo/wp-content/uploads/2020/12/banco_bcp_qr.png",
+                    "caption": "Puede realizar su pago por este medio QR:\n\n\nUna vez realizado el pago. enviar el comprobante"
                 }
             }
         }
